@@ -6,7 +6,7 @@ import datetime
  
 # Configuración
 IP_OSCILOSCOPIO = 'TCPIP::100.0.0.100::INSTR'
-CANAL_DATOS = ['CH1', 'CH2', 'CH3']
+CANAL_DATOS = ['CH1', 'CH2', 'CH3','CH4']
 NUM_PUNTOS = 250000
 TIMEOUT = 5000
  

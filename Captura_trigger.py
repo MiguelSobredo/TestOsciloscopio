@@ -1,5 +1,6 @@
 import pyvisa
 import numpy as np
+import numpy as np
 import pandas as pd
 import time
 import datetime
@@ -12,6 +13,58 @@ TIMEOUT = 5000
  
 # Inicializar VISA
 rm = pyvisa.ResourceManager('@py')
+scope = None
+ 
+def conectar_oscilo():
+    global scope
+    try:
+        scope = rm.open_resource(IP_OSCILOSCOPIO)
+        scope.timeout = TIMEOUT
+        print(scope.query('*IDN?'))
+        scope.write('ACQUIRE:STATE RUN')  # Asegura modo RUN continuo
+    except Exception as e:
+        print(f"[ERROR] Conexión fallida: {e}")
+        scope = None
+ 
+def leer_datos_binarios(canal):
+    try:
+        scope.write('HEADER OFF')  # Desactiva encabezados
+        scope.write(f'DATA:SOURCE {canal}')
+        scope.write('DATA:ENCdg RIBinary')
+        scope.write('DATA:WIDTH 2')
+        scope.write('DATA:START 1')
+        scope.write(f'DATA:STOP {NUM_PUNTOS}')
+        scope.write('CURVE?')
+ 
+        raw = scope.read_raw()
+ 
+        # Manejo del prefijo tipo #500000
+        if raw.startswith(b'#'):
+            header_len = int(raw[1:2])
+            num_bytes = int(raw[2:2+header_len])
+            raw = raw[2+header_len:2+header_len+num_bytes]
+ 
+        valores = np.frombuffer(raw, dtype=np.int16)
+        return valores
+    except Exception as e:
+        print(f"[ERROR] Lectura {canal}: {e}")
+        return []
+ 
+def guardar_csv(datos, timestamp):
+    try:
+        df = pd.DataFrame(datos)
+        filename = f'captura_{timestamp}.csv'
+        df.to_csv(filename, index=False)
+        print(f"[INFO] Guardado: {filename} ({len(df)} filas)")
+    except Exception as e:
+        print(f"[ERROR] Guardando CSV: {e}")
+ 
+# Conexión inicial
+conectar_oscilo()
+ 
+estado_anterior = None
+i = 1
+ 
 scope = None
  
 def conectar_oscilo():
